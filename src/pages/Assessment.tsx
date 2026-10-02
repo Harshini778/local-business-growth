@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router";
 import {
@@ -12,19 +12,13 @@ import { ListenButton } from "@/components/ListenButton";
 function AnalyzingScreen({ t }: { t: (key: string) => string }) {
   const [completed, setCompleted] = useState<number[]>([]);
 
-  useState(() => {
-    const stages = [
-      { delay: 0 },
-      { delay: 600 },
-      { delay: 1200 },
-      { delay: 1800 },
-      { delay: 2400 },
-    ];
-    const timers = stages.map((stage, i) =>
-      setTimeout(() => setCompleted((prev) => [...prev, i]), stage.delay)
+  useEffect(() => {
+    const delays = [0, 600, 1200, 1800, 2400];
+    const timers = delays.map((delay, i) =>
+      setTimeout(() => setCompleted((prev) => [...prev, i]), delay)
     );
     return () => timers.forEach(clearTimeout);
-  });
+  }, []);
 
   const stageKeys = ["analyzingLocation", "reviewingMarket", "estimatingFinancial", "checkingFunding", "preparingRecs"];
 
@@ -90,7 +84,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 export default function Assessment() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { step, setStep, data, updateData, submit } = useAssessment();
+  const { step, setStep, data, updateData, submit, result } = useAssessment();
   const [direction, setDirection] = useState(1);
   const [loanAmountInput, setLoanAmountInput] = useState("");
 
@@ -109,8 +103,16 @@ export default function Assessment() {
   const handleSubmit = () => {
     updateData({ loanAmount: data.loanRequired ? parseInt(loanAmountInput) || 0 : 0 });
     submit();
-    setTimeout(() => navigate("/insights"), 4500);
   };
+
+  // Navigate to insights only once the analysis result actually exists,
+  // then drop back to step 3 so returning to the assessment doesn't loop.
+  useEffect(() => {
+    if (step === "results" && result) {
+      navigate("/insights");
+      setStep(3);
+    }
+  }, [step, result, navigate, setStep]);
 
   const canProceed = () => {
     switch (step) {
@@ -137,8 +139,9 @@ export default function Assessment() {
     t("step4Hint"),
   ];
 
-  // Analyzing state - render Analysis component inline
-  if (step === "analyzing") {
+  // Analyzing state - render Analysis component inline (also shown for the
+  // brief moment while the result is being handed off to /insights)
+  if (step === "analyzing" || step === "results") {
     return (
       <div className="min-h-screen bg-[#FFF9F0] flex items-center justify-center px-4">
         <AnalyzingScreen t={t} />

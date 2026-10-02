@@ -15,8 +15,15 @@ export function BottomNav() {
   const location = useLocation();
   const { t } = useLanguage();
 
-  // Hide on landing page
-  if (location.pathname === "/") return null;
+  // Hide on landing page and on screens that have their own fixed bottom
+  // controls (assessment steps, chat input) — otherwise this nav covers them.
+  if (
+    location.pathname === "/" ||
+    location.pathname === "/assessment" ||
+    location.pathname === "/chat"
+  ) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-[#E9DFD2] safe-bottom">
